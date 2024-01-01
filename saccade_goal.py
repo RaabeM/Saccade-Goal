@@ -34,26 +34,16 @@ class Saccade_goal():
 
         # Map with ccentricities from midpoint in pixel
         self.eccentricity_map = np.fromfunction(lambda i, j: np.sqrt((i-self.MIDPOINT)**2 + (j-self.MIDPOINT)**2), (_WIDTH, _WIDTH))
-        # Map with ccentricities from midpoint in degrees
+        # convert into degrees
         self.eccentricity_map *= _fov/(_WIDTH-1)
 
-        # Count and save how often eccentricity value accures is eccentrcicity map
-        # uniques, counts = np.unique(self.eccentricity_map, return_counts=True)
-       
-        # self.eccentricity_frequency_map = np.zeros((_WIDTH, _WIDTH))
-        # for i in range(_WIDTH):
-        #     for j in range(_WIDTH):
-        #         value = self.eccentricity_map[i,j]
-        #         index = np.where(uniques == value)[0]
-        #         self.eccentricity_frequency_map[i,j] =  counts[index][0]
-
-
-        frequency, bins = np.histogram(self.eccentricity_map.flatten(), bins=30)
+        # Count and save how often eccentricity in certain eccentricity bin accures as map       
+        frequency, bins = np.histogram(self.eccentricity_map.flatten(), range=(0,_fov*np.sqrt(2)+1), bins=30)
         self.eccentricity_frequency_map = np.zeros((_WIDTH, _WIDTH))
         for i in range(_WIDTH):
             for j in range(_WIDTH):
                 ecc = self.eccentricity_map[i,j]
-                bin_index = np.digitize(ecc, bins)-2
+                bin_index = np.digitize(ecc, bins)-1 # -1 to convert to array index & -1 because #Bins = #Datapoints+1
                 self.eccentricity_frequency_map[i,j] =  frequency[bin_index]
 
 
@@ -71,11 +61,12 @@ class Saccade_goal():
                 self.data_mask[i,j] = mean_ch[index]
 
         # Compute overall mask, which gets applied to future saliency map
+        # Mask uniforms the prob. to pick a pixel at certain eccentricity bin and multiplies this with the prob. density from the data
         self.mask = self.data_mask / self.eccentricity_frequency_map
 
 
 
-    def saccade_goal(self, sal_map, mode='index'):
+    def saccade_goal(self, sal_map, mode='angles'):
         """
         sal_map: Saliency map with shape (self.WIDTH, self.WIDTH)
         mode: Output mode
@@ -95,12 +86,15 @@ class Saccade_goal():
 
         # print(choice)
         # print(sal_map.flatten()[choice], sal_map[goal_index])) # If correct this should output the same number twice
+        # print('Goal index', goal_index)
+        # print('Eccentricity', self.eccentricity_map[goal_index])
+        # print('Angles',((goal_index[0]-self.MIDPOINT)*self.fov/(self.WIDTH-1), -(goal_index[1]-self.MIDPOINT)*self.fov/(self.WIDTH-1)))
 
         if mode=='index':
             return goal_index
         elif mode=='eccentricity':
             return self.eccentricity_map[goal_index]
         elif mode=='angles':
-            return goal_index * self.fov/(self.WIDTH-1) #TODO
+            return ((goal_index[0]-self.MIDPOINT)*self.fov/(self.WIDTH-1), -(goal_index[1]-self.MIDPOINT)*self.fov/(self.WIDTH-1)) # Vertical axis is inverted in numpy arrays! -> 2'nd component x(-1)
 
     
