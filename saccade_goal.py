@@ -62,11 +62,11 @@ class Saccade_goal():
 
         # Compute overall mask, which gets applied to future saliency map
         # Mask uniforms the prob. to pick a pixel at certain eccentricity bin and multiplies this with the prob. density from the data
-        self.mask = self.data_mask / self.eccentricity_frequency_map
+        self.data_mask = self.data_mask / self.eccentricity_frequency_map
+        self.magnification_mask = self.eccentricity_map * (1/(0.77+self.eccentricity_map))**2 #dAde = e M**2
 
 
-
-    def saccade_goal(self, sal_map, mode='angles'):
+    def saccade_goal(self, sal_map, mask_type='magnification', output_mode='angles'):
         """
         sal_map: Saliency map with shape (self.WIDTH, self.WIDTH)
         mode: Output mode
@@ -75,8 +75,13 @@ class Saccade_goal():
                 - 'angles'->Tuple: Horizontal & vertical angle of saccade goal in degrees
         """
         
+        if mask_type=='data':
+            mask = self.data_mask
+        elif mask_type=='magnification':
+            mask = self.magnification_mask
+
         # Apply mask
-        sal_map *= self.mask
+        sal_map *= mask
         # Normalize
         sal_map /= np.sum(sal_map)
 
@@ -90,11 +95,11 @@ class Saccade_goal():
         # print('Eccentricity', self.eccentricity_map[goal_index])
         # print('Angles',((goal_index[0]-self.MIDPOINT)*self.fov/(self.WIDTH-1), -(goal_index[1]-self.MIDPOINT)*self.fov/(self.WIDTH-1)))
 
-        if mode=='index':
+        if output_mode=='index':
             return goal_index
-        elif mode=='eccentricity':
+        elif output_mode=='eccentricity':
             return self.eccentricity_map[goal_index]
-        elif mode=='angles':
+        elif output_mode=='angles':
             return ((goal_index[0]-self.MIDPOINT)*self.fov/(self.WIDTH-1), -(goal_index[1]-self.MIDPOINT)*self.fov/(self.WIDTH-1)) # Vertical axis is inverted in numpy arrays! -> 2'nd component x(-1)
 
     
